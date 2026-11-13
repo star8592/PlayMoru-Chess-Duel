@@ -7,8 +7,8 @@
   <meta name="description" content="PlayMoru Chess Duel 王座之战——真实人物国际象棋，经典规则与电影式战场演出。"/>
   <title>王座之战 · PlayMoru Chess Duel</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 fill=%22%23121d2c%22/><text x=%2213%22 y=%2247%22 font-size=%2243%22 fill=%22%23d5b47c%22>♞</text></svg>"/>
-  <script type="module" crossorigin src="/PlayMoru-Chess-Duel/webgpu-v2/assets/index-CAPKGowC.js"></script>
-  <link rel="stylesheet" crossorigin href="/PlayMoru-Chess-Duel/webgpu-v2/assets/index-DYHT6Pqb.css">
+  <script type="module" crossorigin src="/PlayMoru-Chess-Duel/webgpu-v2/assets/index-CdwS2zfa.js"></script>
+  <link rel="stylesheet" crossorigin href="/PlayMoru-Chess-Duel/webgpu-v2/assets/index-Dbse67gI.css">
 </head>
 <body>
 <div id="app" data-phase="loading">
@@ -59,6 +59,18 @@
     </div>
 
     <div id="duel-callout" class="duel-callout" hidden><span>⚔</span><strong>DUEL!</strong><small>荣耀之战</small></div>
+    <div id="check-callout" class="check-callout" hidden aria-live="polite">⚜ 将 军 ⚜<small>KING IN CHECK</small></div>
+    <section id="result-overlay" class="result-overlay" hidden role="dialog" aria-modal="false" aria-label="对局结束">
+      <div class="result-inner">
+        <div class="result-crown">♛</div>
+        <span class="result-eyebrow">THE ROYAL DUEL · FINAL VERDICT</span>
+        <h2 id="result-title">王廷凯旋</h2>
+        <p id="result-reason">CHECKMATE</p>
+        <div class="result-ornament">✦</div>
+        <button type="button" id="result-rematch" class="result-replay">♜ 再战一局</button>
+        <button type="button" id="result-hall" class="result-return">返回王庭大厅</button>
+      </div>
+    </section>
     <div class="battle-ui" id="battle-ui" hidden>
       <div class="faction-score">
         <div class="side side-ivory"><span>♔</span><div>IVORY COURT<small>象牙王庭</small></div></div>
