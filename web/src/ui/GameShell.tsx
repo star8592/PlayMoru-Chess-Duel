@@ -23,6 +23,9 @@ import "./medieval.css";
 type Phase = "loading" | "menu" | "lobby" | "playing";
 
 const ATTRACT_DELAY_MS = 30_000;
+// PlayMoru uses the bundled, complete Roman sculpt roster on first visit.
+// The classic medieval roster can be selected, but its source URLs are remote.
+const PLAYMORU_DEFAULT_ERA: EraId = "rome";
 
 export function GameShell() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -39,9 +42,9 @@ export function GameShell() {
   );
   const [settings, setSettings] = useState<GameSettings>(() => ({
     quality: detected,
-    era: review.era ?? DEFAULT_ERA,
+    era: review.era ?? PLAYMORU_DEFAULT_ERA,
     // The era names its battleground; an explicit ?arena= still wins.
-    arena: review.arena ?? ERAS[review.era ?? DEFAULT_ERA].arena,
+    arena: review.arena ?? ERAS[review.era ?? PLAYMORU_DEFAULT_ERA].arena,
     captureCinematics: true,
     rotateBoard: true,
     rankBadges: true,

@@ -17,3 +17,7 @@ For subpath deployment, set PUBLIC_BASE=/preview/chess-duel/ during build and se
 
 ## Gate
 Do not list as a finished PlayMoru game before independent visual, actual gameplay and mobile tests. Three armies ship ~186 MB of GLBs. Loading times, LOD and licensed material provenance must be audited. Never replace high-quality characters with crude primitive models only to cut download size.
+
+## PlayMoru first-visit roster
+The initial (no-query) PlayMoru experience selects the **bundled Rome era**: six quality rigged role sculpts, each shared by two visually distinct teams with local skeletal animation files. This avoids the original default classic era's remote R2 model CDN dependency for the initial scene. All three era packs remain selectable. The original classic era still uses the upstream remote model/audio source when deliberately selected, and audio still may load remotely.
+This is a quality-preserving load/reliability choice, **not** a claim that the complete app is offline-ready. See independent browser QA receipts before merge.
