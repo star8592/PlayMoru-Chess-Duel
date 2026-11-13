@@ -1,0 +1,13 @@
+import * as THREE from 'three/webgpu';
+const canvas=document.querySelector('#c');
+const renderer=new THREE.WebGPURenderer({canvas,antialias:true});
+const scene=new THREE.Scene();scene.background=new THREE.Color(0xb3d5dd);
+const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.1,100);camera.position.set(3,3,7);camera.lookAt(0,0,0);
+const mesh=new THREE.Mesh(new THREE.BoxGeometry(2,2,2),new THREE.MeshStandardMaterial({color:0xe69441,metalness:.2,roughness:.5}));
+scene.add(mesh);scene.add(new THREE.HemisphereLight(0xffffff,0x456077,3));
+const sun=new THREE.DirectionalLight(0xffffff,4);sun.position.set(4,8,6);scene.add(sun);
+await renderer.init();
+renderer.setSize(innerWidth,innerHeight,false);
+let frames=0;
+renderer.setAnimationLoop(()=>{mesh.rotation.y+=.006;renderer.render(scene,camera);frames++;});
+window.__smoke={backend:renderer.backend.constructor.name,frames:()=>frames};
