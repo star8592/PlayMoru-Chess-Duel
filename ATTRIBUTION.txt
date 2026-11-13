@@ -1,1 +1,1 @@
-PlayMoru derivative from Kings Gambit (MIT). See LICENSE and source repository.
+PlayMoru derivative from Kings Gambit under MIT; see LICENSE and attribution in repository.
