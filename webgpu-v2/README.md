@@ -30,3 +30,6 @@ both e2-e4; queen capture Qxd7+, castling O-O, en passant exf6 all passed.
 Only browser emulation on desktop GPU was used for mobile tests.
 Real phone performance, native WebGPU, art review and production migration remain
 gates; no changes are made to playmoru.com or the old public chess preview.
+
+Preview currently live, separate from old production chess page:
+https://star8592.github.io/PlayMoru-Chess-Duel/webgpu-v2/
