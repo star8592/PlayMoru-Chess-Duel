@@ -72,13 +72,13 @@ export function MainMenu({ onStart, onPlayOnline, onOpenSettings, attract, onInt
       onPointerMove={onInteract}
     >
       <div className="mc-unfurl mc-menu-hero mb-6 min-h-0 shrink text-center">
-        <p className="mc-display text-[0.68rem] tracking-[0.55em] text-[#c8ab74]">Anno Domini MCDXCII</p>
+        <p className="mc-display text-[0.68rem] tracking-[0.55em] text-[#c8ab74]">PLAYMORU CLASSICS · CHARACTER CHESS</p>
         <h1 className="mc-display mc-title-glow mt-2 text-5xl font-bold text-[#f4e3bd] sm:text-6xl">
-          KING&apos;S GAMBIT
+          CHESS DUEL
         </h1>
         <div className="mc-rule mx-auto mt-3 w-64" />
         <p className="mt-3 text-sm italic text-[#c5b28d]">
-          {attract ? "A showcase duel is under way — move to take the hall" : "Chess in the great hall of Aldermoor"}
+          {attract ? "A showcase duel is under way — move to take the hall" : "Classic rules. Real characters. Every capture becomes a duel."}
         </p>
       </div>
 
@@ -100,14 +100,16 @@ export function MainMenu({ onStart, onPlayOnline, onOpenSettings, attract, onInt
           >
             <Users size={14} /> 2 Players
           </button>
-          <button
-            type="button"
-            className="mc-chip flex items-center justify-center gap-1.5 px-1 py-3"
-            data-active={tab === "online"}
-            onClick={() => setTab("online")}
-          >
-            <Globe size={14} /> Online
-          </button>
+          {import.meta.env.VITE_ENABLE_ONLINE === "true" ? (
+            <button
+              type="button"
+              className="mc-chip flex items-center justify-center gap-1.5 px-1 py-3"
+              data-active={tab === "online"}
+              onClick={() => setTab("online")}
+            >
+              <Globe size={14} /> Online
+            </button>
+          ) : null}
           <button
             type="button"
             className="mc-chip flex items-center justify-center gap-1.5 px-1 py-3"
@@ -293,6 +295,9 @@ export function MainMenu({ onStart, onPlayOnline, onOpenSettings, attract, onInt
         </div>
       </div>
 
+      <p className="mt-3 shrink-0 text-center text-[0.62rem] tracking-[0.08em] text-[#8b8068]">
+        PlayMoru adaptation of <a className="underline underline-offset-2" href="https://github.com/ade5791/rork-medieval-3d-chess" target="_blank" rel="noreferrer">King&apos;s Gambit</a> · MIT
+      </p>
       <p className="mc-menu-hint mt-5 shrink-0 text-[0.68rem] tracking-[0.2em] text-[#7d6f57]">
         DRAG TO ORBIT · SCROLL TO ZOOM · CLICK A FIGURE TO COMMAND IT
       </p>
