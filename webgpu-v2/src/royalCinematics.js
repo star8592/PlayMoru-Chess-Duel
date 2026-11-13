@@ -85,9 +85,9 @@ export class RoyalCameraDirector {
   }
 }
 
-export function royalImpact(THREE,scene,at,enqueue) {
+export function royalImpact(THREE,scene,at,enqueue,color=0xffd38b) {
   const ringMaterial = new THREE.MeshBasicMaterial({
-    color:0xffd38b,transparent:true,opacity:.88,
+    color,transparent:true,opacity:.88,
     blending:THREE.AdditiveBlending,depthWrite:false,toneMapped:false,
     side:THREE.DoubleSide
   });
@@ -96,7 +96,7 @@ export function royalImpact(THREE,scene,at,enqueue) {
   ring.position.copy(at);
   ring.position.y = .55;
   scene.add(ring);
-  const light = new THREE.PointLight(0xffbb72,10,4.5,2);
+  const light = new THREE.PointLight(color,10,4.5,2);
   light.position.copy(at).add(new THREE.Vector3(0,1.45,0));
   scene.add(light);
   return enqueue(.43,t=>{

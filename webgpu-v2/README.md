@@ -54,3 +54,11 @@ on legal captures, GPU-light contact ring and return to full-board framing.
 The chess.js controller check and gameover events drive alerts and verdicts.
 Rematch resets the complete 32-character board.
 Evidence: evidence/ROYAL-CINEMATICS-20261113.md.
+
+## R4 — six distinct combat roles and correct facing
+Real GLB attack/death clips are now loaded before play and staged as
+approach -> face-off -> role-specific wind-up -> impact -> actual collapse ->
+occupy destination. Characters rotate smoothly toward their opponent and
+back to the opposing army; camera close-ups and royal music remain intact.
+Mid-combat new-game requests cancel old visual jobs. See
+evidence/COMBAT-CHOREOGRAPHY-R4-20261113.md and tests/role-facing-qa.mjs.

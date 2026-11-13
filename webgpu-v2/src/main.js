@@ -4,6 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 import { buildRoyalArchitecture } from './royalArchitecture.js';
 import { RoyalCameraDirector, royalImpact } from './royalCinematics.js';
+import { combatStyle, restingYaw, targetYaw, shortestYawDelta, standoffPoint } from './combatDirection.js';
 import { GameController } from '../../web/src/core/gameController.ts';
 import './style.css';
 
@@ -101,6 +102,8 @@ let lastFrameAt=performance.now();
 
 let audioCtx=null;
 let hovered=null;
+let visualEpoch=0;
+let combatState={phase:'idle',role:null,attacker:null,defender:null,standoff:null,impactCount:0};
 let ceremonialPhase='loading';
 let soundEnabled=true;
 let announcementTimer=null;
@@ -174,14 +177,15 @@ async function preload(){
    return [kind,{scene:base.scene,clips}];
  }));
  for(const [kind,v]of entries)templates.set(kind,v);
- // Additional rig-matched animations are loaded after the first frame.
- for(const kind of ROLES){
-   for(const action of ['idle','walk','attack','death']){
-     void loader.loadAsync(asset(kind,action)).then(gltf=>{
-       if(gltf.animations.length) templates.get(kind).clips[action]=gltf.animations[0];
-     }).catch(err=>console.warn('[v2] optional clip fallback',kind,action,String(err)));
-   }
- }
+ // All 24 actual rig-compatible clips load before first human input.
+ await Promise.all(ROLES.flatMap(kind=>
+  ['idle','walk','attack','death'].map(async name=>{
+   const gltf=await loader.loadAsync(asset(kind,name));
+   if(!gltf.animations[0])throw new Error('Missing '+name+' skeleton clip: '+kind);
+   templates.get(kind).clips[name]=gltf.animations[0];
+  })
+ ));
+ stageStats.loadedCombatClips=24;
 }
 
 function skinnedRoot(kind,color,square){
@@ -191,7 +195,7 @@ function skinnedRoot(kind,color,square){
  actor.userData.square=square;actor.userData.kind='chess-piece';
  const form=cloneSkeleton(template.scene);
  form.name='roman-figure-'+kind;
- form.rotation.y=color==='w'?Math.PI:0;
+ form.rotation.y=restingYaw(color);
  form.scale.setScalar(.82);
  actor.add(form);
  let meshes=0,skins=0;
@@ -224,13 +228,9 @@ function skinnedRoot(kind,color,square){
  rim.rotation.x=Math.PI/2;rim.position.y=.045;actor.add(rim);
  const p=XZ(square);actor.position.copy(p);
  const mixer=new THREE.AnimationMixer(form);
- const idle=template.clips.idle;
- if(idle){
-  const loop=mixer.clipAction(idle);
-  loop.reset().setLoop(THREE.LoopRepeat,Infinity).play();
- }
  mixers.add(mixer);
  actor.userData.mixer=mixer;
+ actor.userData.currentAction=null;
  actor.userData.form=form;
  actor.userData.restScale=1;
  actor.userData.role=kind;
@@ -238,10 +238,15 @@ function skinnedRoot(kind,color,square){
  scene.add(actor);
  actorMap.set(square,actor);
  stageStats.modelCount++;
+ action(actor,'idle');
  return actor;
 }
 
 function clearPieces(){
+ visualEpoch++;
+ royalCamera.cancel();
+ for(const job of activeMoves.splice(0))job.resolve();
+ combatState={phase:'idle',role:null,attacker:null,defender:null,standoff:null,impactCount:combatState.impactCount};
  for(const actor of actorMap.values()){
   mixers.delete(actor.userData.mixer);
   actor.userData.mixer.stopAllAction();
@@ -322,25 +327,34 @@ function playHeraldFanfare(){
   }
  }catch(e){console.warn('[ceremony] audio unavailable',String(e))}
 }
-function showDuelCallout(){
+function showDuelCallout(role){
  if(reducedMotion||ceremonialPhase!=='playing')return;
  const callout=$('duel-callout');
  if(!callout)return;
+ const titles={p:'步兵突刺',r:'重装破阵',n:'骑士突袭',b:'圣裁降临',q:'皇后秘法',k:'王者裁决'};
+ callout.querySelector('small').textContent=titles[role]||'荣耀之战';
  if(duelTimer)clearTimeout(duelTimer);
  callout.hidden=false;
  duelTimer=setTimeout(()=>{callout.hidden=true;duelTimer=null},900);
 }
-function action(actor,name){
+function action(actor,name,seconds=null){
+ if(!actor?.parent)return null;
  const clip=templates.get(actor.userData.role)?.clips?.[name];
- if(!clip)return;
+ if(!clip)return null;
  const mixer=actor.userData.mixer;
  try{
-  mixer.stopAllAction();
-  const a=mixer.clipAction(clip);
-  a.reset().setLoop(name==='idle'?THREE.LoopRepeat:THREE.LoopOnce,name==='idle'?Infinity:1);
-  a.clampWhenFinished=name!=='idle';a.fadeIn(.1).play();
- }catch(e){console.warn('[v2] animation fallback',e);}
+  const next=mixer.clipAction(clip);
+  const old=actor.userData.currentAction;
+  if(old&&old!==next)old.fadeOut(.11);
+  next.reset().setEffectiveWeight(1).setLoop(name==='idle'||name==='walk'?THREE.LoopRepeat:THREE.LoopOnce,name==='idle'||name==='walk'?Infinity:1);
+  next.clampWhenFinished=name!=='idle'&&name!=='walk';
+  next.setEffectiveTimeScale(seconds&&seconds>.05?Math.min(4.2,Math.max(.48,clip.duration/seconds)):1);
+  next.fadeIn(.11).play();
+  actor.userData.currentAction=next;
+  return next;
+ }catch(e){console.warn('[v2] animation fallback',e);return null}
 }
+
 function addJob(duration,update){
  return new Promise(resolve=>activeMoves.push({duration,elapsed:0,update,resolve}));
 }
@@ -382,77 +396,182 @@ async function revealRoyalResult(result){
  if(epoch!==resultOverlayEpoch)return;
  playHeraldFanfare();
 }
+function faceActor(actor,point){
+ const yaw=targetYaw(actor.position,point);
+ if(yaw===null)return;
+ actor.userData.form.rotation.y=yaw;
+}
+async function swivelActor(actor,yaw,duration,epoch){
+ if(yaw===null)return;
+ const form=actor.userData.form;
+ const from=form.rotation.y;
+ const delta=shortestYawDelta(from,yaw);
+ if(Math.abs(delta)<.025){form.rotation.y=yaw;return;}
+ await addJob(duration,t=>{
+  if(epoch===visualEpoch&&actor.parent)form.rotation.y=from+delta*t;
+ });
+ if(epoch===visualEpoch&&actor.parent)form.rotation.y=yaw;
+}
+async function turnCombatants(attacker,defender,duration,epoch){
+ const a=attacker.userData.form,b=defender.userData.form;
+ const toA=targetYaw(attacker.position,defender.position);
+ const toB=targetYaw(defender.position,attacker.position);
+ if(toA===null||toB===null)return;
+ const a0=a.rotation.y,b0=b.rotation.y;
+ const da=shortestYawDelta(a0,toA),db=shortestYawDelta(b0,toB);
+ await addJob(duration,t=>{
+  if(epoch!==visualEpoch)return;
+  a.rotation.y=a0+da*t;
+  b.rotation.y=b0+db*t;
+ });
+ if(epoch!==visualEpoch)return;
+ a.rotation.y=toA;b.rotation.y=toB;
+}
+function combatInfo(){
+ const a=combatState.attacker,b=combatState.defender;
+ let facingError=null,opponentFacingError=null,distance=null;
+ if(a&&b&&a.parent&&b.parent){
+  const ya=targetYaw(a.position,b.position),yb=targetYaw(b.position,a.position);
+  facingError=ya===null?null:Math.abs(shortestYawDelta(a.userData.form.rotation.y,ya));
+  opponentFacingError=yb===null?null:Math.abs(shortestYawDelta(b.userData.form.rotation.y,yb));
+  distance=Number(a.position.distanceTo(b.position).toFixed(2));
+ }
+ return {phase:combatState.phase,role:combatState.role,
+  style:combatState.role?combatStyle(combatState.role).name:null,
+  facingError,opponentFacingError,distance,standoff:combatState.standoff,impactCount:combatState.impactCount,
+  attackerClip:a?.userData.currentAction?.getClip()?.name||null,
+  defenderClip:b?.userData.currentAction?.getClip()?.name||null};
+}
+function playCombatSound(profile){
+ if(!soundEnabled)return;
+ sound(profile.frequency,Math.min(.22,profile.swing*.30));
+ try{
+  audioCtx??=new(window.AudioContext||window.webkitAudioContext)();
+  const osc=audioCtx.createOscillator(),gain=audioCtx.createGain(),t=audioCtx.currentTime;
+  osc.type=['royal-spell','judgement'].includes(profile.name)?'sine':'triangle';
+  osc.frequency.setValueAtTime(profile.frequency*1.75,t);
+  osc.frequency.exponentialRampToValueAtTime(Math.max(80,profile.frequency*.44),t+.16);
+  gain.gain.setValueAtTime(.0001,t);
+  gain.gain.linearRampToValueAtTime(.06,t+.014);
+  gain.gain.exponentialRampToValueAtTime(.0001,t+.2);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start(t);osc.stop(t+.205);
+ }catch(e){}
+}
 async function animateMove(event){
  const from=actorMap.get(event.from);
  if(!from){
-  console.warn('[v2] visual desync; rebuilding after missing source',event.from);
+  console.warn('[v2] visual desync: missing source piece',event.from);
   rebuild();return;
  }
+ const epoch=visualEpoch;
+ const style=combatStyle(event.kind);
+ const valid=()=>epoch===visualEpoch&&from.parent===scene;
  const victim=event.capture?actorMap.get(event.capture.square):null;
+ const isCapture=!!victim;
  actorMap.delete(event.from);
  if(victim)actorMap.delete(event.capture.square);
  actorMap.set(event.to,from);
  from.userData.square=event.to;
  const start=from.position.clone(),end=XZ(event.to);
- const long=start.distanceTo(end);
- const secs=Math.min(1.05,Math.max(.53,long*.16));
- // The original game's most valuable visual beat: a genuine two-character
- // camera shot before contact. Never zoom in on a quiet pawn move.
- if(victim&&!reducedMotion){
-  await royalCamera.enterCapture(start,victim.position.clone());
+ const defenderSpot=victim?.position.clone()||null;
+ const chargeTarget=isCapture?standoffPoint(THREE,start,defenderSpot,style.standoff):end;
+ const travel=start.distanceTo(chargeTarget);
+ const seconds=Math.min(1.14,Math.max(.32,travel*.18))/style.charge;
+ if(isCapture){
+  combatState={phase:'camera',role:event.kind,attacker:from,defender:victim,standoff:null,impactCount:combatState.impactCount};
+  if(!reducedMotion)await royalCamera.enterCapture(start,defenderSpot);
+  if(!valid())return;
  }
- action(from,'walk');
- const oldCamera=orbit.target.clone();
- const targetCam=event.capture?end.clone().add(new THREE.Vector3(0,.65,0)):null;
- await addJob(secs,t=>{
-  from.position.lerpVectors(start,end,t);
-  from.position.y+=Math.sin(Math.PI*t)*Math.min(.25,long*.035);
-  if(targetCam)orbit.target.lerpVectors(oldCamera,targetCam,t*.07);
+ await swivelActor(from,targetYaw(from.position,chargeTarget),isCapture?.16:.12,epoch);
+ if(!valid())return;
+ action(from,'walk',seconds);
+ if(isCapture)combatState.phase='approach';
+ await addJob(seconds,t=>{
+  if(!valid())return;
+  from.position.lerpVectors(start,chargeTarget,t);
+  from.position.y+=Math.sin(Math.PI*t)*Math.min(.14,travel*.03);
  });
- from.position.copy(end);
+ if(!valid())return;
+ from.position.copy(chargeTarget);
  if(event.rook){
   const rook=actorMap.get(event.rook.from);
   if(rook){
-   actorMap.delete(event.rook.from);actorMap.set(event.rook.to,rook);
+   actorMap.delete(event.rook.from);
+   actorMap.set(event.rook.to,rook);
    rook.userData.square=event.rook.to;
-   const a=rook.position.clone(),b=XZ(event.rook.to);
-   await addJob(.3,t=>rook.position.lerpVectors(a,b,t));
-   rook.position.copy(b);
+   const rStart=rook.position.clone(),rEnd=XZ(event.rook.to);
+   faceActor(rook,rEnd);action(rook,'walk',.36);
+   await addJob(.36,t=>{if(epoch===visualEpoch)rook.position.lerpVectors(rStart,rEnd,t)});
+   if(!valid())return;
+   rook.position.copy(rEnd);
+   rook.userData.form.rotation.y=restingYaw(rook.userData.faction);
+   action(rook,'idle');
   }
  }
- if(victim){
-  showDuelCallout();
-  action(from,'attack');action(victim,'death');
-  sound(190,.19);
-  const startScale=victim.scale.x;
-  // The strike sends a short physical light pulse and an expanding gilt ring;
-  // light is local to the actual captured square, not a whole-screen flash.
-  await Promise.all([
-   royalImpact(THREE,scene,victim.position.clone(),addJob),
-   addJob(.58,t=>{
-    victim.rotation.z=t*.45*(event.color==='w'?1:-1);
-    victim.scale.setScalar(Math.max(.001,startScale*(1-t)));
-   })
-  ]);
-  mixers.delete(victim.userData.mixer);
+ if(isCapture){
+  combatState.phase='faceoff';
+  await turnCombatants(from,victim,style.turn,epoch);
+  if(!valid())return;
+  combatState.standoff=Number(from.position.distanceTo(victim.position).toFixed(2));
+  combatState.phase='windup';
+  showDuelCallout(event.kind);
+  action(from,'attack',style.wind+style.swing+style.recovery);
+  await addJob(style.wind+style.swing*.55,()=>{});
+  if(!valid())return;
+  combatState.phase='impact';
+  combatState.impactCount++;
+  playCombatSound(style);
+  action(victim,'death',style.fall);
+  const startingZ=victim.rotation.z;
+  const effect=royalImpact(THREE,scene,defenderSpot,addJob,style.impact);
+  const body=addJob(style.fall,t=>{
+   if(epoch!==visualEpoch)return;
+   // Authored bones perform the fall. Only ground settling accompanies them.
+   victim.position.y=defenderSpot.y-.08*t;
+   victim.rotation.z=startingZ+((event.color==='w')?1:-1)*.07*t;
+  });
+  await Promise.all([effect,body]);
+  if(!valid())return;
   victim.userData.mixer.stopAllAction();
+  mixers.delete(victim.userData.mixer);
   victim.removeFromParent();
   stageStats.modelCount=Math.max(0,stageStats.modelCount-1);
   stageStats.skinnedCount=Math.max(0,stageStats.skinnedCount-1);
- } else sound(480,.12);
+  combatState.phase='advance';
+  const occupyingFrom=from.position.clone();
+  await addJob(style.follow,t=>{if(valid())from.position.lerpVectors(occupyingFrom,end,t)});
+  if(!valid())return;
+  from.position.copy(end);
+  if(!reducedMotion)await Promise.all([
+   royalCamera.exitCapture(),
+   swivelActor(from,restingYaw(event.color),.28,epoch)
+  ]);
+  else await swivelActor(from,restingYaw(event.color),.24,epoch);
+  if(!valid())return;
+  combatState.phase='complete';
+ }else{
+  from.position.copy(end);
+  sound(480,.12);
+  await swivelActor(from,restingYaw(event.color),.17,epoch);
+  if(!valid())return;
+ }
  if(event.promotion){
-  mixers.delete(from.userData.mixer);
   from.userData.mixer.stopAllAction();
-  from.removeFromParent();actorMap.delete(event.to);
+  mixers.delete(from.userData.mixer);
+  from.removeFromParent();
+  actorMap.delete(event.to);
   stageStats.modelCount=Math.max(0,stageStats.modelCount-1);
   stageStats.skinnedCount=Math.max(0,stageStats.skinnedCount-1);
   skinnedRoot(event.promotion,event.color,event.to);
+ }else{
+  action(from,'idle');
  }
- action(actorMap.get(event.to),'idle');
- if(victim&&!reducedMotion)await royalCamera.exitCapture();
- else orbit.target.lerp(new THREE.Vector3(0,.55,0),.5);
+ if(!isCapture)orbit.target.lerp(new THREE.Vector3(0,.55,0),.5);
  clearSelection();
+ combatState={phase:'idle',role:null,attacker:null,defender:null,standoff:null,impactCount:combatState.impactCount};
 }
+
 
 function updateHud(){
  const s=controller.getSnapshot();
@@ -714,7 +833,7 @@ async function init(){
   stageStats.firstFrameAt=performance.now();
   window.__pmv2=Object.freeze({
    snapshot:()=>controller.getSnapshot(),
-   info:()=>({backend:currentBackend,backendName:renderer.backend?.constructor?.name,webgpu:!!renderer.backend?.isWebGPUBackend,roles:stageStats.loadedRoleModels,clipsLoaded:[...templates.values()].reduce((n,t)=>n+Object.keys(t.clips).length,0),pieces:actorMap.size,skinned:stageStats.skinnedCount,fps:displayedFPS,selected,targets:targetSquares,activeMoves:activeMoves.length,animationTimeouts:controller.getAnimationTimeouts(),lastErrors:stageStats.errors.slice(-3),phase:ceremonialPhase,cinematicActive:royalCamera.isActive,cameraDistance:+camera.position.distanceTo(orbit.target).toFixed(2),cameraFov:+camera.fov.toFixed(2),version:'v2-royal-cinematic'}),
+   info:()=>({backend:currentBackend,backendName:renderer.backend?.constructor?.name,webgpu:!!renderer.backend?.isWebGPUBackend,roles:stageStats.loadedRoleModels,clipsLoaded:[...templates.values()].reduce((n,t)=>n+Object.keys(t.clips).length,0),pieces:actorMap.size,skinned:stageStats.skinnedCount,fps:displayedFPS,selected,targets:targetSquares,activeMoves:activeMoves.length,animationTimeouts:controller.getAnimationTimeouts(),lastErrors:stageStats.errors.slice(-3),phase:ceremonialPhase,cinematicActive:royalCamera.isActive,combat:combatInfo(),cameraDistance:+camera.position.distanceTo(orbit.target).toFixed(2),cameraFov:+camera.fov.toFixed(2),version:'v2-royal-cinematic'}),
    squareScreen: square=>{
     const p=XZ(square).project(camera),r=STAGE.getBoundingClientRect();
     return {x:r.left+(p.x+1)*r.width/2,y:r.top+(1-p.y)*r.height/2};
