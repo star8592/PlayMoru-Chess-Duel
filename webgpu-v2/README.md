@@ -43,3 +43,7 @@ The opening exists in the actual game, not as static concept art.
 
 Enter on the front page; to bypass ceremony in deterministic QA use ?review=1.
 See evidence/CEREMONY-RESTORATION-20261113.md and screenshots.
+
+Royal Hall architectural extension: independent PBR stone and bronze colonnades, dual
+banners, torch details and a lighter open royal arena background. The arcade is
+visual dressing only and never affects chess moves or the Roman SkinnedMesh models.

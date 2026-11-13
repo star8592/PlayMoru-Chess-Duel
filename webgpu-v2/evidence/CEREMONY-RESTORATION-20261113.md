@@ -44,3 +44,14 @@ Independent real Chrome public network test results:
 - Archived real public screenshots: royal-public-desktop-menu.jpg, royal-public-desktop-battle.jpg, royal-public-mobile-menu.jpg, royal-public-mobile-battle.jpg.
 - Existing independent scripted tests also passed actual Qxd7+, O-O, exf6 captures/castling/en passant.
 - review=1 query intentionally skips the ceremonial hall, solely for deterministic debugging/QA. Normal visitors receive the full ceremony.
+
+## Background architecture extension
+The earlier PBR stage looked like a sample board floating over a featureless plain.
+A separate royalArchitecture module now supplies two stone-and-bronze porticos,
+two hanging royal banners and subtle torch accents behind the actual board,
+without enclosing the figures in a dark hall. The first continuous 30m lintel
+looked like a floating shelf in Chrome and was **discarded**. The final two
+separate portal groups do not block playable squares.
+Local browser QA with the new environment: desktop+mobile ceremony/hall e2->e4
+and back navigation 2/2; 3/3 queen capture/castle/en passant all passed.
+See royal-porticos-*-menu.jpg and royal-porticos-*-battle.jpg.

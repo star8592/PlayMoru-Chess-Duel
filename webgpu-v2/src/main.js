@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
+import { buildRoyalArchitecture } from './royalArchitecture.js';
 import { GameController } from '../../web/src/core/gameController.ts';
 import './style.css';
 
@@ -152,6 +153,7 @@ function createWorld(){
   }
 }
 createWorld();
+buildRoyalArchitecture(THREE,scene,mat);
 
 const XZ=square=>{
  const col=square.charCodeAt(0)-97;
