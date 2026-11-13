@@ -55,3 +55,14 @@ separate portal groups do not block playable squares.
 Local browser QA with the new environment: desktop+mobile ceremony/hall e2->e4
 and back navigation 2/2; 3/3 queen capture/castle/en passant all passed.
 See royal-porticos-*-menu.jpg and royal-porticos-*-battle.jpg.
+
+## Final colonnade public acceptance
+GitHub Pages published source commit c27717c2ad55cef4a3ca72c97960d02f76464c65;
+new versioned script index-CAPKGowC.js HTTP 200 and Pages status built.
+Independent public Chrome end-to-end:
+- Desktop 1440x900: main ceremonial menu -> enter arena -> perform e2/e4 ->
+  back to royal hall PASS; backend WebGL2, 32 skinned characters, errors 0.
+- Mobile simulated 390x844: same touch flow PASS; 32 skinned characters,
+  JS errors 0, missing assets 0. Not a phone GPU benchmark.
+- Screenshots royal-porticos-public-{desktop,mobile}-{menu,battle}.jpg are
+  real Chrome output from the live GitHub Pages URL.
