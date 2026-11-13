@@ -61,3 +61,28 @@ cover normal e2/e4, AI replies, castling, en passant, checkmate, rematch and
 the full ceremony on desktop and emulated touch.
 
 Evidence screenshots are real browser pixels, not AI-generated mockups.
+
+## Signed-off test evidence, isolated GitHub Pages preview
+
+Source commit: b71c25d31fc77aeb8b7d5fb8e6d0b7ed7015f305.
+Page deployment commit: 2e9b4e493506079ca395557eba40a881649d0672.
+Published new hashed script index-CWXaqhhX.js; both index and asset HTTP 200.
+
+Desktop Chrome on Z890 RTX 5070 Ti, real mouse (local and live public):
+- All six role captures passed and sourced their actual GLB attack clips.
+- Attackers and defenders: yaw facing error 0 within displayed 4-decimal radian precision.
+- Standoff lengths: Pawn 0.65, Knight 0.80, Rook 0.83, Bishop 0.88,
+  Queen 0.86, King 0.63 world units. No actor-overlap in faceoff.
+- Each test had valid SAN move, expected 1-piece capture decrement,
+  zero JS errors and zero missing resource requests.
+- Restart while a queen attack was winding up restored 32 actors,
+  zero pending visual jobs and a clean empty history.
+- Public Chrome regression: original ceremony, desktop and emulated mobile
+  full entry -> e2/e4 -> return hall all passed, 32/32 skinned characters.
+- Public capture camera, mobile viewport and staged checkmate/rematch
+  all passed; FOV and camera distance reset after captures.
+- This is NOT a physical mobile-device/GPU performance acceptance.
+- Native WebGPU remains unqualified; playable backend is r187 WebGPURenderer
+  on certified WebGL2.
+- Screenshots role-facing-public-{n,q,r}.jpg are from the deployed actual
+  public browser page, not a mockup.
