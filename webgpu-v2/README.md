@@ -33,3 +33,13 @@ gates; no changes are made to playmoru.com or the old public chess preview.
 
 Preview currently live, separate from old production chess page:
 https://star8592.github.io/PlayMoru-Chess-Duel/webgpu-v2/
+
+## The Royal Hall restoration (game identity, not a tech dashboard)
+After player review, V2 now presents a full-screen cinematic Chess Duel opening hall,
+two opposed royal factions, gold heraldry, opening camera drift, user-triggered
+fanfare, marching characters, match proclamation, battle HUD and capture DUEL
+callouts. Normal game-facing UI hides engine labels (optional ?debug=1 only).
+The opening exists in the actual game, not as static concept art.
+
+Enter on the front page; to bypass ceremony in deterministic QA use ?review=1.
+See evidence/CEREMONY-RESTORATION-20261113.md and screenshots.

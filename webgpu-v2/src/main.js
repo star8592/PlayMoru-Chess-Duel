@@ -18,6 +18,7 @@ const testFen=params.get('fen');
 const requestedBackend=params.get('backend');
 const testMode=params.get('review')==='1';
 const STAGE=$('stage');
+$('app').dataset.debug=params.get('debug')==='1'?'1':'0';
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(COLORS.sky);
 scene.fog=new THREE.Fog(COLORS.sky,24,60);
@@ -98,6 +99,12 @@ let lastFrameAt=performance.now();
 
 let audioCtx=null;
 let hovered=null;
+let ceremonialPhase='loading';
+let soundEnabled=true;
+let announcementTimer=null;
+let duelTimer=null;
+const reducedMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+const ceremonyStartedAt=performance.now();
 const stageStats={loadedRoleModels:0,modelCount:0,skinnedCount:0,errors:[],firstFrameAt:null};
 
 function add(mesh, parent=scene){parent.add(mesh);return mesh;}
@@ -274,6 +281,7 @@ function select(square){
 }
 
 function sound(freq=520,dur=.10){
+ if(!soundEnabled)return;
  try{
   audioCtx??=new (window.AudioContext||window.webkitAudioContext)();
   if(audioCtx.state==='suspended')audioCtx.resume();
@@ -285,6 +293,37 @@ function sound(freq=520,dur=.10){
   gain.gain.exponentialRampToValueAtTime(.0001,now+dur);
   osc.connect(gain).connect(audioCtx.destination);osc.start(now);osc.stop(now+dur);
  }catch(_){}
+}
+function playHeraldFanfare(){
+ if(!soundEnabled)return;
+ try{
+  audioCtx??=new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended')void audioCtx.resume();
+  const start=audioCtx.currentTime;
+  // Three-note original ceremonial motif; synthesised locally after a click.
+  for(const [freq,offset,duration] of [[196,0,.27],[293.66,.19,.33],[392,.41,.75]]){
+   const oscillator=audioCtx.createOscillator();
+   const gain=audioCtx.createGain();
+   const filter=audioCtx.createBiquadFilter();
+   oscillator.type='triangle';
+   oscillator.frequency.setValueAtTime(freq,start+offset);
+   oscillator.frequency.linearRampToValueAtTime(freq*1.006,start+offset+duration*.65);
+   filter.type='lowpass';filter.frequency.value=1300;
+   gain.gain.setValueAtTime(.001,start+offset);
+   gain.gain.linearRampToValueAtTime(.07,start+offset+.045);
+   gain.gain.exponentialRampToValueAtTime(.0001,start+offset+duration);
+   oscillator.connect(filter).connect(gain).connect(audioCtx.destination);
+   oscillator.start(start+offset);oscillator.stop(start+offset+duration+.02);
+  }
+ }catch(e){console.warn('[ceremony] audio unavailable',String(e))}
+}
+function showDuelCallout(){
+ if(reducedMotion||ceremonialPhase!=='playing')return;
+ const callout=$('duel-callout');
+ if(!callout)return;
+ if(duelTimer)clearTimeout(duelTimer);
+ callout.hidden=false;
+ duelTimer=setTimeout(()=>{callout.hidden=true;duelTimer=null},900);
 }
 function action(actor,name){
  const clip=templates.get(actor.userData.role)?.clips?.[name];
@@ -334,6 +373,7 @@ async function animateMove(event){
   }
  }
  if(victim){
+  showDuelCallout();
   action(from,'attack');action(victim,'death');
   sound(190,.19);
   const startScale=victim.scale.x;
@@ -391,7 +431,7 @@ function getSquareByPointer(event){
 let down=null;
 STAGE.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY};});
 STAGE.addEventListener('pointerup',async e=>{
- if(!stageReady||!down||Math.hypot(down.x-e.clientX,down.y-e.clientY)>14)return;
+ if(!stageReady||ceremonialPhase!=='playing'||!down||Math.hypot(down.x-e.clientX,down.y-e.clientY)>14)return;
  down=null;
  if(!controller.isHumanTurn())return;
  const square=getSquareByPointer(e);
@@ -408,19 +448,109 @@ STAGE.addEventListener('pointerup',async e=>{
 });
 window.addEventListener('pointercancel',()=>{down=null;});
 
+function enterCeremonialHall(){
+ ceremonialPhase='menu';
+ $('app').dataset.phase='menu';
+ $('battle-ui').hidden=true;
+ $('battle-announcement').hidden=true;
+ $('intro-menu').setAttribute('aria-hidden','false');
+ orbit.enabled=false;
+ clearSelection();
+ camera.position.set(5.6,10.5,16.6);
+ orbit.target.set(-2.0,.6,0);
+ camera.lookAt(orbit.target);
+ $('status').textContent='即将迎战';
+}
+
+function performRoyalEntrance(){
+ if(reducedMotion)return;
+ const marching=[];
+ for(const actor of actorMap.values()){
+  const finish=actor.position.clone();
+  const direction=actor.userData.faction==='w'?1:-1;
+  const begin=finish.clone().add(new THREE.Vector3(0,0,direction*1.45));
+  actor.position.copy(begin);
+  if(templates.get(actor.userData.role)?.clips.walk)action(actor,'walk');
+  marching.push({actor,begin,finish});
+ }
+ // Both armies take their places in unison while the herald calls the duel.
+ void addJob(1.3,t=>{
+  for(const {actor,begin,finish} of marching)
+   actor.position.lerpVectors(begin,finish,t);
+ }).then(()=>{
+  for(const {actor,finish} of marching){
+   if(!actor.parent)continue;
+   actor.position.copy(finish);
+   action(actor,'idle');
+  }
+ });
+}
+function startCeremonialMatch(){
+ if(!stageReady)return;
+ currentMode=$('game-mode').value;
+ const difficulty=$('difficulty').value;
+ controller.start({mode:currentMode,difficulty,playerColor:'w',clockMinutes:null});
+ rebuild();
+ performRoyalEntrance();
+ clearSelection();
+ ceremonialPhase='announcing';
+ $('app').dataset.phase='playing';
+ $('intro-menu').setAttribute('aria-hidden','true');
+ $('battle-ui').hidden=true;
+ orbit.enabled=false;
+ // Portrait users need the entire 8x8 board in frame, not clipped ranks.
+ const portrait=STAGE.clientWidth/Math.max(1,STAGE.clientHeight)<.75;
+ camera.position.set(0,portrait?15.5:10.8,portrait?24.0:15.0);
+ orbit.target.set(0,.55,0);
+ camera.lookAt(orbit.target);
+ playHeraldFanfare();
+ $('battle-announcement').hidden=false;
+ if(announcementTimer)clearTimeout(announcementTimer);
+ const duration=reducedMotion?250:1850;
+ announcementTimer=setTimeout(()=>{
+  $('battle-announcement').hidden=true;
+  $('battle-ui').hidden=false;
+  ceremonialPhase='playing';
+  orbit.enabled=true;
+  announcementTimer=null;
+ },duration);
+ updateHud();
+}
 function configureUI(){
+ $('intro-start').addEventListener('click',startCeremonialMatch);
  $('start').addEventListener('click',()=>{
+  if(announcementTimer){clearTimeout(announcementTimer);announcementTimer=null}
+  $('battle-announcement').hidden=true;
+  $('battle-ui').hidden=false;
+  ceremonialPhase='playing';
+  orbit.enabled=true;
   currentMode=$('game-mode').value;
   controller.start({mode:currentMode,difficulty:$('difficulty').value,playerColor:'w',clockMinutes:null});
-  rebuild();sound(660,.12);
+  rebuild();playHeraldFanfare();
  });
  $('undo').addEventListener('click',()=>{
   if(controller.undo()){rebuild();sound(310,.09);}
  });
  $('flip').addEventListener('click',()=>{
-  const azimuth=orbit.getAzimuthalAngle();
   camera.position.set(-camera.position.x,camera.position.y,-camera.position.z);
   orbit.update();
+ });
+ $('menu-button').addEventListener('click',()=>{
+  if(announcementTimer){clearTimeout(announcementTimer);announcementTimer=null}
+  controller.stop();
+  enterCeremonialHall();
+ });
+ $('fullscreen-button').addEventListener('click',async()=>{
+  try{
+   if(document.fullscreenElement)await document.exitFullscreen();
+   else await document.documentElement.requestFullscreen();
+  }catch(e){console.warn('[ceremony] fullscreen unavailable',String(e))}
+ });
+ $('sound-toggle').addEventListener('click',()=>{
+  soundEnabled=!soundEnabled;
+  $('sound-toggle').setAttribute('aria-pressed',String(soundEnabled));
+  $('sound-toggle').innerHTML=soundEnabled?'♫ <span>音效 开</span>':'♪ <span>音效 关</span>';
+  if(soundEnabled)sound(650,.07);
  });
  $('game-mode').addEventListener('change',()=>{
   $('difficulty').disabled=$('game-mode').value!=='ai';
@@ -458,7 +588,15 @@ function frame(){
   job.update(smooth);
   if(t>=1){activeMoves.splice(i,1);job.resolve();}
  }
- orbit.update();
+ if(ceremonialPhase==='menu'&&!reducedMotion){
+  // The opening camera glides across the actual battle-ready characters.
+  // No pre-rendered video, placeholders or fake character artwork.
+  const t=(now-ceremonyStartedAt)/1000;
+  camera.position.x=5.6+Math.sin(t*.22)*.62;
+  camera.position.y=10.5+Math.sin(t*.18)*.32;
+  camera.position.z=16.6+Math.cos(t*.19)*.34;
+  camera.lookAt(orbit.target);
+ }else orbit.update();
  if(stageReady) renderer.render(scene,camera);
 }
 
@@ -482,11 +620,20 @@ async function init(){
   controller.start({mode:currentMode,difficulty:'medium',playerColor:'w',clockMinutes:null,fen:testFen});
   rebuild();
   $('loading').classList.add('hidden');
+  if(testMode){
+   ceremonialPhase='playing';
+   $('app').dataset.phase='playing';
+   $('battle-ui').hidden=false;
+   $('intro-menu').setAttribute('aria-hidden','true');
+   orbit.enabled=true;
+  }else{
+   enterCeremonialHall();
+  }
   updateHud();
   stageStats.firstFrameAt=performance.now();
   window.__pmv2=Object.freeze({
    snapshot:()=>controller.getSnapshot(),
-   info:()=>({backend:currentBackend,backendName:renderer.backend?.constructor?.name,webgpu:!!renderer.backend?.isWebGPUBackend,roles:stageStats.loadedRoleModels,clipsLoaded:[...templates.values()].reduce((n,t)=>n+Object.keys(t.clips).length,0),pieces:actorMap.size,skinned:stageStats.skinnedCount,fps:displayedFPS,selected,targets:targetSquares,activeMoves:activeMoves.length,animationTimeouts:controller.getAnimationTimeouts(),lastErrors:stageStats.errors.slice(-3),version:'v2'}),
+   info:()=>({backend:currentBackend,backendName:renderer.backend?.constructor?.name,webgpu:!!renderer.backend?.isWebGPUBackend,roles:stageStats.loadedRoleModels,clipsLoaded:[...templates.values()].reduce((n,t)=>n+Object.keys(t.clips).length,0),pieces:actorMap.size,skinned:stageStats.skinnedCount,fps:displayedFPS,selected,targets:targetSquares,activeMoves:activeMoves.length,animationTimeouts:controller.getAnimationTimeouts(),lastErrors:stageStats.errors.slice(-3),phase:ceremonialPhase,version:'v2-ceremony'}),
    squareScreen: square=>{
     const p=XZ(square).project(camera),r=STAGE.getBoundingClientRect();
     return {x:r.left+(p.x+1)*r.width/2,y:r.top+(1-p.y)*r.height/2};
@@ -504,4 +651,8 @@ async function init(){
  }
 }
 init();
-window.addEventListener('beforeunload',()=>{try{controller.dispose();renderer.dispose();resizeObserver.disconnect()}catch(e){}});
+window.addEventListener('beforeunload',()=>{
+ if(announcementTimer)clearTimeout(announcementTimer);
+ if(duelTimer)clearTimeout(duelTimer);
+ try{controller.dispose();renderer.dispose();resizeObserver.disconnect();audioCtx?.close()}catch(e){}
+});
