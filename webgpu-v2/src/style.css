@@ -186,3 +186,29 @@ h2{font-family:"Songti SC","Noto Serif SC","SimSun",serif;margin:14px 0 12px;fon
 .result-return:hover{background:#304151}
 @media(max-width:620px){.result-inner{padding:28px 22px 24px}.result-overlay{backdrop-filter:blur(2px)}}
 @media(prefers-reduced-motion:reduce){.check-callout{animation:none}}
+
+
+/* Dialogue is a theatrical moment, not a permanently visible debug panel. */
+.royal-subtitle[hidden]{display:none!important}
+.royal-subtitle{position:absolute;z-index:12;bottom:clamp(115px,16.4vh,176px);left:50%;
+ transform:translateX(-50%);width:max-content;max-width:min(740px,84vw);
+ display:flex;flex-direction:column;align-items:center;gap:7px;
+ border-top:1px solid rgba(230,195,128,.52);border-bottom:1px solid rgba(230,195,128,.52);
+ padding:12px 28px 14px;text-align:center;background:linear-gradient(90deg,transparent,rgba(12,30,44,.91) 14%,rgba(12,30,44,.91) 86%,transparent);
+ color:#fff1d6;text-shadow:0 2px 9px rgba(0,0,0,.65);pointer-events:none}
+.royal-subtitle-actor{font:10px Arial,"Noto Sans SC",sans-serif;color:#e9c788;letter-spacing:.18em}
+.royal-subtitle-line{font:normal clamp(14px,1.6vw,19px) "Songti SC","Noto Serif SC","SimSun",serif;
+ line-height:1.52;letter-spacing:.10em}
+#app[data-phase="menu"] .royal-subtitle{bottom:12vh;max-width:60vw}
+@media(max-width:620px){
+ .royal-subtitle{bottom:170px;max-width:91vw;padding:10px 18px 12px}
+ .royal-subtitle-line{font-size:14px}
+ #app[data-phase="menu"] .royal-subtitle{bottom:8vh;max-width:91vw}
+}
+
+.listen-overture{display:block;margin:12px auto 0;padding:5px 8px;
+ background:transparent;border:0;border-bottom:1px solid rgba(231,199,139,.45);
+ color:#e7d3ab;font:11px "Songti SC","Noto Serif SC",serif;letter-spacing:.12em;
+ transition:color .2s,border-color .2s}
+.listen-overture:hover{color:#fff0cf;border-color:#ebd4a4}
+@media(max-width:620px){.listen-overture{margin:9px auto 0;font-size:10px}}

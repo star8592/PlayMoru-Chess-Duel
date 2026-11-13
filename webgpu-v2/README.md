@@ -62,3 +62,12 @@ occupy destination. Characters rotate smoothly toward their opponent and
 back to the opposing army; camera close-ups and royal music remain intact.
 Mid-combat new-game requests cancel old visual jobs. See
 evidence/COMBAT-CHOREOGRAPHY-R4-20261113.md and tests/role-facing-qa.mjs.
+
+## R5 — original royal score and character dubbing
+Original medieval/Roman-styled music cues: opening, arena loop, duel sting,
+victory and draw. Thirty-six offline-generated Chinese lines use fixed, attributed
+Apache-2.0 Kokoro voices across eight character personas. The director provides
+scene-synchronized voice + subtitle, automatic music ducking, a call-and-response
+opening with randomized variations, and a default-on sound toggle. No copied
+third-party music or soundfonts, and no runtime inference. Model and media file
+provenance: audio/AUDIO-SYSTEM.md and audio/voice-manifest.json.

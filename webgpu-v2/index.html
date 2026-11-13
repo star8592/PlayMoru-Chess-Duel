@@ -21,7 +21,7 @@
       </a>
       <div class="top-emblem"><span>✦</span><b>CHESS DUEL</b><span>✦</span></div>
       <div class="top-actions">
-        <button type="button" id="sound-toggle" class="subtle-action" aria-label="切换声音" aria-pressed="true">♫ <span>音效 开</span></button>
+        <button type="button" id="sound-toggle" class="subtle-action" aria-label="切换音乐、对白和音效" aria-pressed="true">♫ <span>音乐·对白 开</span></button>
         <button type="button" id="fullscreen-button" class="subtle-action" aria-label="切换全屏">⛶ <span>全屏</span></button>
         <button type="button" id="menu-button" class="subtle-action" aria-label="返回对局大厅">☰ <span>大厅</span></button>
       </div>
@@ -48,6 +48,7 @@
           <select id="difficulty"><option value="easy">见习骑士</option><option value="medium" selected>皇家守卫</option><option value="hard">王座挑战者</option></select>
         </div>
         <button type="button" class="enter-btn" id="intro-start"><span class="enter-symbol">♜</span> 进入战场 <span class="enter-arrow">→</span></button>
+        <button type="button" id="listen-overture" class="listen-overture">♫ 试听王庭序曲与角色旁白</button>
         <p class="prompt">真实角色 · 经典规则 · 每次吃子都是一场交锋</p>
       </div>
     </section>
@@ -56,6 +57,10 @@
       <div class="announcement-frame"><span>THE ROYAL MATCH</span><strong>王座之战 · 开幕</strong><em>LET THE DUEL BEGIN</em></div>
     </div>
 
+    <aside id="royal-subtitle" class="royal-subtitle" role="status" aria-live="polite" aria-atomic="true" hidden>
+      <span class="royal-subtitle-actor"></span>
+      <span class="royal-subtitle-line"></span>
+    </aside>
     <div id="duel-callout" class="duel-callout" hidden><span>⚔</span><strong>DUEL!</strong><small>荣耀之战</small></div>
     <div id="check-callout" class="check-callout" hidden aria-live="polite">⚜ 将 军 ⚜<small>KING IN CHECK</small></div>
     <section id="result-overlay" class="result-overlay" hidden role="dialog" aria-modal="false" aria-label="对局结束">
