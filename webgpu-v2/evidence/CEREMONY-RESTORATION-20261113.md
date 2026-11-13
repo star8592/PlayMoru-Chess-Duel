@@ -33,3 +33,14 @@ royal-battle-mobile.jpg
 Compare earlier v2-public-desktop.jpg in this folder: the initial V2 had a prominent technical sidebar and no game-opening sequence. Review both screenshots to judge the identity change.
 
 Separate GitHub Pages preview only. The original public chess page and playmoru.com remain untouched.
+
+## Public Pages verification after deployment
+Published in GitHub Pages gh-pages commit 0b9a8178e8e0fbffd145978cb69b5756737ed071. Public script index-C1W_ZL9-.js returned HTTP 200 and status built. Independent URL:
+https://star8592.github.io/PlayMoru-Chess-Duel/webgpu-v2/
+
+Independent real Chrome public network test results:
+- Desktop (1440x900): full hall appears with official-style Chess Duel branding; Enter Battlefield begins duel, title card ends, canvas mouse move e2->e4 succeeds; return to hall succeeds. 32/32 skinned figures; WebGL2 confirmed; no JS errors or missing asset requests.
+- Simulated phone viewport (390x844): same full flow via mobile touch; 32/32 skinned actors, no page JS errors or missing assets. This does not certify a real phone GPU.
+- Archived real public screenshots: royal-public-desktop-menu.jpg, royal-public-desktop-battle.jpg, royal-public-mobile-menu.jpg, royal-public-mobile-battle.jpg.
+- Existing independent scripted tests also passed actual Qxd7+, O-O, exf6 captures/castling/en passant.
+- review=1 query intentionally skips the ceremonial hall, solely for deterministic debugging/QA. Normal visitors receive the full ceremony.
