@@ -1,1 +1,1 @@
-PlayMoru derivative from Kings Gambit under MIT; see LICENSE and attribution in repository.
+PlayMoru Chess Duel is a derivative of Kings Gambit (MIT). See LICENSE.
