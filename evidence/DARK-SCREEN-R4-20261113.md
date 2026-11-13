@@ -7,7 +7,7 @@ User screenshot: full 3D chess screen nearly black; floor and board disappear, p
 - detectQualityPreset() used to auto-select Ultra on fast RTX/modern GPU; earlier acceptance screenshots predominantly used quality=medium and missed the actual user's default path.
 - QUALITY_SETTINGS.ultra.ssao was TRUE. Extra SSAOPass is a plausible ANGLE/driver bug risk, especially when the game becomes dark but unlit labels remain. This remains a strong *hypothesis*, NOT a universally reproduced proof: Vulkan on Z890 rendered Ultra properly.
 - High-end GPUs now select High by default; 3D skinned animations, shadows, bloom remain. Ultra stays opt-in with 4K shadows/dense effects but without SSAO.
-- Previous black frame guard only checked the central 8x8 patch twice during initial loading. Now a populated daytime scene samples 9 central pixels periodically and drops postprocessing when 8/9 points have luma <24 for three checks. Dark Dusk art is excluded.
+- Previous black frame guard only checked the central 8x8 patch twice during initial loading. Now a populated daytime scene reads a 24x24 central pixel patch with one GPU readback per check, drops postprocessing when 90% of the patch is <24 luma for three checks, then stops checking after two healthy samples. It restarts checks only when quality/arena changes. Dark Dusk art is excluded.
 - UI description was corrected to avoid claiming disabled SSAO.
 
 ## Verification

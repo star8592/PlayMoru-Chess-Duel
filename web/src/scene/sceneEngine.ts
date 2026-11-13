@@ -442,6 +442,7 @@ export class SceneEngine {
   /** Seeded stream for strike dressing - keeps staged captures reproducible. */
   private readonly strikeRng = rng.fork("scene:engine");
   private blackFrameChecks = 0;
+  private visibilityGoodChecks = 0;
   private lastVisibilityCheckMs = -1e9;
 
   private preset: QualityPreset;
@@ -1283,13 +1284,20 @@ export class SceneEngine {
    * legal moves and audio; the low-risk High auto preset is the first defence.
    */
   private guardAgainstBlackFrames(): void {
-    if (!this.postfx.enabled || this.blackFrameChecks >= 3) return;
+    if (!this.postfx.enabled || this.blackFrameChecks >= 3 || this.visibilityGoodChecks >= 2) return;
     if (this.pieces.size < 24 || this.arena === "dusk") return;
     const now = performance.now();
     if (now - this.lastVisibilityCheckMs < 850) return;
     this.lastVisibilityCheckMs = now;
-    if (this.isSceneUnreadablyDark()) this.blackFrameChecks += 1;
-    else this.blackFrameChecks = 0;
+    if (this.isSceneUnreadablyDark()) {
+      this.blackFrameChecks += 1;
+      this.visibilityGoodChecks = 0;
+    } else {
+      this.blackFrameChecks = 0;
+      // Once two populated frames read normally, retire the synchronous
+      // readback until the user changes quality or arena.
+      this.visibilityGoodChecks += 1;
+    }
     if (this.blackFrameChecks < 3) return;
     this.postfx.forceDirect("populated chess scene was almost black for 3 checks");
   }
@@ -1297,31 +1305,27 @@ export class SceneEngine {
   private isSceneUnreadablyDark(): boolean {
     const gl = this.renderer.getContext();
     const { width, height } = this.renderer.domElement;
-    if (width < 32 || height < 32) return false;
-    const samples = [
-      [0.35, 0.30], [0.50, 0.30], [0.65, 0.30],
-      [0.35, 0.48], [0.50, 0.48], [0.65, 0.48],
-      [0.35, 0.66], [0.50, 0.66], [0.65, 0.66],
-    ] as const;
-    let dark = 0;
-    const pixel = new Uint8Array(4);
+    if (width < 64 || height < 64) return false;
+    // One GPU readback of the board centre, not nine separate readbacks.
+    // Browser drivers can stall the GPU synchronously on readPixels.
+    const size = 24;
+    const pixels = new Uint8Array(size * size * 4);
     try {
-      for (const [x, y] of samples) {
-        gl.readPixels(
-          Math.floor(width * x), Math.floor(height * y),
-          1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel,
-        );
-        if (gl.getError() !== gl.NO_ERROR) return false;
-        // The screenshot reported <20 luma over nearly the whole board.
-        const luma = pixel[0] * 0.2126 + pixel[1] * 0.7152 + pixel[2] * 0.0722;
-        if (luma < 24) dark++;
-      }
+      gl.readPixels(
+        Math.floor(width / 2 - size / 2),
+        Math.floor(height / 2 - size / 2),
+        size, size, gl.RGBA, gl.UNSIGNED_BYTE, pixels,
+      );
+      if (gl.getError() !== gl.NO_ERROR) return false;
     } catch {
       return false;
     }
-    // At least 8/9 central board pixels must be close to black for
-    // three checks; prevents responding to intentional artistic shadows.
-    return dark >= 8;
+    let dark = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+      const luma = pixels[i] * 0.2126 + pixels[i + 1] * 0.7152 + pixels[i + 2] * 0.0722;
+      if (luma < 24) dark++;
+    }
+    return dark / (size * size) >= 0.9;
   }
 
   private sampleFps(delta: number): void {
@@ -3560,6 +3564,8 @@ export class SceneEngine {
    */
   setArena(theme: ArenaTheme): void {
     if (theme === this.arena) return;
+    this.blackFrameChecks = 0;
+    this.visibilityGoodChecks = 0;
     this.arena = theme;
     const look = ARENA_LOOKS[theme];
 
@@ -3609,6 +3615,8 @@ export class SceneEngine {
 
   setQuality(preset: QualityPreset): void {
     if (preset === this.preset) return;
+    this.blackFrameChecks = 0;
+    this.visibilityGoodChecks = 0;
     this.preset = preset;
     const settings = QUALITY_SETTINGS[preset];
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, settings.maxPixelRatio));
