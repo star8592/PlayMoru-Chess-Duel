@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d1c2a" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 fill=%22%230d1c2a%22/><text x=%2214%22 y=%2247%22 font-size=%2243%22 fill=%22%23e6c58b%22>♞</text></svg>" />
+  <meta name="description" content="PlayMoru 角色化国际象棋 WebGPU V2 实验版：基于标准国际象棋规则和真实骨骼人物，WebGPU 优先、WebGL2 回退。" />
+  <title>棋局即战场 · PlayMoru Chess Duel WebGPU</title>
+</head>
+<body>
+  <div id="app">
+    <header class="nav">
+      <a href="https://playmoru.com/" class="brand">PLAYMORU <span>CLASSICS</span></a>
+      <span class="nav-mid">CHESS DUEL <i> / </i> NEXT-GEN RENDERER</span>
+      <div class="backend-indicator" id="backend-pill">检测图形设备…</div>
+    </header>
+    <main>
+      <aside class="panel">
+        <div class="eyebrow">VOL. 01 / THE ROYAL MATCH</div>
+        <h1>棋局<br/><em>即战场。</em></h1>
+        <p class="intro">每一枚棋子，都是一位战士。经典规则，真实角色，光与影的对决。</p>
+        <div class="ribbon">ROME LEGION <span>✦</span> IVORY × ONYX</div>
+        <div class="section-head">比赛控制 <span>MATCH CONTROL</span></div>
+        <label class="field-label" for="game-mode">模式</label>
+        <select id="game-mode"><option value="ai">人机对战</option><option value="hotseat">双人同屏</option></select>
+        <label class="field-label" for="difficulty">电脑难度</label>
+        <select id="difficulty"><option value="easy">入门</option><option selected value="medium">标准</option><option value="hard">大师</option></select>
+        <div class="buttons">
+          <button id="start" class="primary">开始新对局 <span>↗</span></button>
+          <button id="undo">悔棋</button>
+          <button id="flip">旋转镜头</button>
+        </div>
+        <div class="line"></div>
+        <div class="turn">当前战况 <span class="turn-detail" id="status">正在加载角色…</span></div>
+        <p class="move-list" id="moves">等待第一手落子。</p>
+        <div class="origin">基于 King’s Gambit MIT 开源项目 · 采用原版真实角色资产</div>
+      </aside>
+      <div class="stage">
+        <canvas id="stage" aria-label="三维国际象棋棋盘，点击人物选中棋子，再点击目的格落子"></canvas>
+        <div class="stage-title"><span class="red-line"></span><span>THE ROYAL ARENA</span><small>REAL-TIME 3D CHARACTER CHESS</small></div>
+        <div class="stage-hud"><span class="dot"></span><span id="frame-stats">渲染准备中</span><span class="hud-sep">|</span><span>鼠标拖动旋转 · 滚轮缩放 · 点击落子</span></div>
+        <div class="loading-overlay" id="loading"><div class="loader-ring"></div><b id="load-message">正在建立 WebGPU 渲染器</b><small>加载原版高精度骨骼人物，并不使用低模占位</small></div>
+        <div class="stage-bottom">P L A Y M O R U <span>✦</span> C L A S S I C S</div>
+      </div>
+    </main>
+    <footer>PLAYMORU LAB / GRAPHICS REVISION 2.0 <a href="https://github.com/ade5791/rork-medieval-3d-chess" target="_blank" rel="noopener">原版项目与 MIT 许可证</a></footer>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
