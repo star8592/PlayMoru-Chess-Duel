@@ -442,6 +442,7 @@ export class SceneEngine {
   /** Seeded stream for strike dressing - keeps staged captures reproducible. */
   private readonly strikeRng = rng.fork("scene:engine");
   private blackFrameChecks = 0;
+  private lastVisibilityCheckMs = -1e9;
 
   private preset: QualityPreset;
   private arena: ArenaTheme = DEFAULT_ARENA;
@@ -1272,46 +1273,55 @@ export class SceneEngine {
   }
 
   /**
-   * Some GPU/driver combinations silently produce an empty frame through the
-   * composer. Sample the middle of the canvas twice during the first seconds
-   * and fall back to a plain forward render rather than showing a black hall.
+   * Browser/driver recovery. An invalid SSAO or compositor path can produce
+   * silhouettes and glowing icons while the *lit* chess board disappears.
+   * A centre pixel != 0 is NOT proof that the board is visible.
+   *
+   * Only check a populated, normal daylight match. Sampling during loading,
+   * intro or the deliberately dark Dusk art direction causes false alarms.
+   * Repeated low-luminance readings drop the composer, preserving figures,
+   * legal moves and audio; the low-risk High auto preset is the first defence.
    */
   private guardAgainstBlackFrames(): void {
-    if (this.blackFrameChecks >= 2 || !this.postfx.enabled) return;
-    const due = this.blackFrameChecks === 0 ? 1.2 : 2.6;
-    if (this.elapsed < due) return;
-    this.blackFrameChecks += 1;
-    if (!this.isCentreBlack()) {
-      this.blackFrameChecks = 2;
-      return;
-    }
-    if (this.blackFrameChecks < 2) return;
-    this.postfx.forceDirect("composer produced an empty frame");
+    if (!this.postfx.enabled || this.blackFrameChecks >= 3) return;
+    if (this.pieces.size < 24 || this.arena === "dusk") return;
+    const now = performance.now();
+    if (now - this.lastVisibilityCheckMs < 850) return;
+    this.lastVisibilityCheckMs = now;
+    if (this.isSceneUnreadablyDark()) this.blackFrameChecks += 1;
+    else this.blackFrameChecks = 0;
+    if (this.blackFrameChecks < 3) return;
+    this.postfx.forceDirect("populated chess scene was almost black for 3 checks");
   }
 
-  private isCentreBlack(): boolean {
+  private isSceneUnreadablyDark(): boolean {
     const gl = this.renderer.getContext();
     const { width, height } = this.renderer.domElement;
-    if (width < 8 || height < 8) return false;
-    const span = 8;
-    const pixels = new Uint8Array(span * span * 4);
+    if (width < 32 || height < 32) return false;
+    const samples = [
+      [0.35, 0.30], [0.50, 0.30], [0.65, 0.30],
+      [0.35, 0.48], [0.50, 0.48], [0.65, 0.48],
+      [0.35, 0.66], [0.50, 0.66], [0.65, 0.66],
+    ] as const;
+    let dark = 0;
+    const pixel = new Uint8Array(4);
     try {
-      gl.readPixels(
-        Math.floor(width / 2 - span / 2),
-        Math.floor(height / 2 - span / 2),
-        span,
-        span,
-        gl.RGBA,
-        gl.UNSIGNED_BYTE,
-        pixels,
-      );
+      for (const [x, y] of samples) {
+        gl.readPixels(
+          Math.floor(width * x), Math.floor(height * y),
+          1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel,
+        );
+        if (gl.getError() !== gl.NO_ERROR) return false;
+        // The screenshot reported <20 luma over nearly the whole board.
+        const luma = pixel[0] * 0.2126 + pixel[1] * 0.7152 + pixel[2] * 0.0722;
+        if (luma < 24) dark++;
+      }
     } catch {
       return false;
     }
-    for (let i = 0; i < pixels.length; i += 4) {
-      if (pixels[i] > 10 || pixels[i + 1] > 10 || pixels[i + 2] > 10) return false;
-    }
-    return true;
+    // At least 8/9 central board pixels must be close to black for
+    // three checks; prevents responding to intentional artistic shadows.
+    return dark >= 8;
   }
 
   private sampleFps(delta: number): void {

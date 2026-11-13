@@ -109,7 +109,10 @@ export const QUALITY_SETTINGS: Record<QualityPreset, QualitySettings> = {
   ultra: {
     postFx: true,
     bloom: true,
-    ssao: true,
+    // SSAOPass is driver-sensitive: on some Chrome/ANGLE combinations it
+    // turns the beauty pass nearly black while the unlit labels remain.
+    // Keep 4K shadows, skeletal animations and all cinematic effects.
+    ssao: false,
     dof: true,
     grade: true,
     smaa: true,
@@ -160,7 +163,9 @@ export function detectQualityPreset(): QualityPreset {
 
   if (weakGpu || cores <= 2 || memory <= 2) return "low";
   if (isTouch) return cores >= 8 && memory >= 6 ? "medium" : "low";
-  if (strongGpu && cores >= 8 && memory >= 8) return "ultra";
+  // Ultra is a deliberate opt-in. Auto-choosing it made real Chrome sessions
+  // look like a black void despite Medium/High QA passing.
+  if (strongGpu && cores >= 8 && memory >= 8) return "high";
   if (cores >= 6 && memory >= 4) return "high";
   return "medium";
 }

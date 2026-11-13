@@ -34,7 +34,7 @@ try{
   page.on('pageerror',e=>errors.push(e.message));
   const start=Date.now();
   try{
-   await page.goto(BASE+'?review=1&probe=1&quality=medium&seed=manual',{waitUntil:'domcontentloaded',timeout:20000});
+   await page.goto(BASE+'?review=1&probe=1&seed=manual',{waitUntil:'domcontentloaded',timeout:20000});
    await page.waitForFunction(()=>window.__kg?.roster()?.pieces===32 && window.__kg?.controller?.getSnapshot()?.status==='playing',null,{timeout:90000,polling:300});
    await page.waitForTimeout(1500);
    const pre=await page.evaluate(()=>({roster:window.__kg.roster(),camera:window.__kg.cameraState(),source:window.__kg.provenance()}));

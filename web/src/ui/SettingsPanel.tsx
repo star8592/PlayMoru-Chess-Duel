@@ -35,7 +35,7 @@ const PRESETS: { key: QualityPreset; label: string; note: string }[] = [
   { key: "low", label: "Low", note: "No post-processing, no shadows — runs anywhere" },
   { key: "medium", label: "Medium", note: "Bloom, shadows, light shafts, some dust" },
   { key: "high", label: "High", note: "Adds depth of field, grade, 2K shadows" },
-  { key: "ultra", label: "Ultra", note: "Ambient occlusion, 4K shadows, dense particles" },
+  { key: "ultra", label: "Ultra", note: "4K shadows, dense particles, cinematic characters" },
 ];
 
 export function SettingsPanel({
