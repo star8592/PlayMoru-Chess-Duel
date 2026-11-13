@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 import { buildRoyalArchitecture } from './royalArchitecture.js';
+import { RoyalCameraDirector, royalImpact } from './royalCinematics.js';
 import { GameController } from '../../web/src/core/gameController.ts';
 import './style.css';
 
@@ -104,6 +105,8 @@ let ceremonialPhase='loading';
 let soundEnabled=true;
 let announcementTimer=null;
 let duelTimer=null;
+let resultOverlayEpoch=0;
+let checkCalloutTimer=null;
 const reducedMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 const ceremonyStartedAt=performance.now();
 const stageStats={loadedRoleModels:0,modelCount:0,skinnedCount:0,errors:[],firstFrameAt:null};
@@ -341,6 +344,44 @@ function action(actor,name){
 function addJob(duration,update){
  return new Promise(resolve=>activeMoves.push({duration,elapsed:0,update,resolve}));
 }
+const royalCamera = new RoyalCameraDirector(THREE,camera,orbit,addJob);
+
+function dismissResult(){
+ resultOverlayEpoch++;
+ $('result-overlay').hidden=true;
+ royalCamera.cancel();
+ if(checkCalloutTimer){clearTimeout(checkCalloutTimer);checkCalloutTimer=null;}
+ $('check-callout').hidden=true;
+}
+function showCheck(){
+ if(reducedMotion||ceremonialPhase!=='playing')return;
+ const node=$('check-callout');
+ if(checkCalloutTimer)clearTimeout(checkCalloutTimer);
+ node.hidden=false;
+ checkCalloutTimer=setTimeout(()=>{node.hidden=true;checkCalloutTimer=null;},1300);
+}
+async function revealRoyalResult(result){
+ if(ceremonialPhase!=='playing')return;
+ const epoch=++resultOverlayEpoch;
+ ceremonialPhase='result';
+ $('app').dataset.phase='result';
+ const title = result.winner==='w'?'象牙王庭 凯旋':result.winner==='b'?'黑曜军团 凯旋':'王庭议和';
+ const explanation = result.reason==='checkmate'?'将死 · CHECKMATE'
+  :result.reason==='stalemate'?'逼和 · STALEMATE'
+  :result.reason==='resignation'?'认输 · RESIGNATION'
+  :result.reason==='timeout'?'时间耗尽 · TIMEOUT':'和棋 · DRAW';
+ $('result-title').textContent=title;
+ $('result-reason').textContent=explanation;
+ $('result-overlay').hidden=false;
+ // There is no CGI-only victory. Focus on the actual winning commander.
+ const commander=[...actorMap.values()].find(a=>a.userData.role==='k'&&a.userData.faction===(result.winner||'w'));
+ if(commander&&!reducedMotion){
+  try{await royalCamera.endgame(commander.position,result.winner||'w');}
+  catch(e){console.warn('[ceremony] winner camera fallback',String(e));}
+ }
+ if(epoch!==resultOverlayEpoch)return;
+ playHeraldFanfare();
+}
 async function animateMove(event){
  const from=actorMap.get(event.from);
  if(!from){
@@ -355,6 +396,11 @@ async function animateMove(event){
  const start=from.position.clone(),end=XZ(event.to);
  const long=start.distanceTo(end);
  const secs=Math.min(1.05,Math.max(.53,long*.16));
+ // The original game's most valuable visual beat: a genuine two-character
+ // camera shot before contact. Never zoom in on a quiet pawn move.
+ if(victim&&!reducedMotion){
+  await royalCamera.enterCapture(start,victim.position.clone());
+ }
  action(from,'walk');
  const oldCamera=orbit.target.clone();
  const targetCam=event.capture?end.clone().add(new THREE.Vector3(0,.65,0)):null;
@@ -379,10 +425,15 @@ async function animateMove(event){
   action(from,'attack');action(victim,'death');
   sound(190,.19);
   const startScale=victim.scale.x;
-  await addJob(.58,t=>{
-   victim.rotation.z=t*.45*(event.color==='w'?1:-1);
-   victim.scale.setScalar(Math.max(.001,startScale*(1-t)));
-  });
+  // The strike sends a short physical light pulse and an expanding gilt ring;
+  // light is local to the actual captured square, not a whole-screen flash.
+  await Promise.all([
+   royalImpact(THREE,scene,victim.position.clone(),addJob),
+   addJob(.58,t=>{
+    victim.rotation.z=t*.45*(event.color==='w'?1:-1);
+    victim.scale.setScalar(Math.max(.001,startScale*(1-t)));
+   })
+  ]);
   mixers.delete(victim.userData.mixer);
   victim.userData.mixer.stopAllAction();
   victim.removeFromParent();
@@ -398,7 +449,8 @@ async function animateMove(event){
   skinnedRoot(event.promotion,event.color,event.to);
  }
  action(actorMap.get(event.to),'idle');
- orbit.target.lerp(new THREE.Vector3(0,.55,0),.5);
+ if(victim&&!reducedMotion)await royalCamera.exitCapture();
+ else orbit.target.lerp(new THREE.Vector3(0,.55,0),.5);
  clearSelection();
 }
 
@@ -451,6 +503,7 @@ STAGE.addEventListener('pointerup',async e=>{
 window.addEventListener('pointercancel',()=>{down=null;});
 
 function enterCeremonialHall(){
+ dismissResult();
  ceremonialPhase='menu';
  $('app').dataset.phase='menu';
  $('battle-ui').hidden=true;
@@ -489,6 +542,7 @@ function performRoyalEntrance(){
 }
 function startCeremonialMatch(){
  if(!stageReady)return;
+ dismissResult();
  currentMode=$('game-mode').value;
  const difficulty=$('difficulty').value;
  controller.start({mode:currentMode,difficulty,playerColor:'w',clockMinutes:null});
@@ -521,6 +575,7 @@ function startCeremonialMatch(){
 function configureUI(){
  $('intro-start').addEventListener('click',startCeremonialMatch);
  $('start').addEventListener('click',()=>{
+  dismissResult();
   if(announcementTimer){clearTimeout(announcementTimer);announcementTimer=null}
   $('battle-announcement').hidden=true;
   $('battle-ui').hidden=false;
@@ -538,6 +593,7 @@ function configureUI(){
   orbit.update();
  });
  $('menu-button').addEventListener('click',()=>{
+  dismissResult();
   if(announcementTimer){clearTimeout(announcementTimer);announcementTimer=null}
   controller.stop();
   enterCeremonialHall();
@@ -557,7 +613,30 @@ function configureUI(){
  $('game-mode').addEventListener('change',()=>{
   $('difficulty').disabled=$('game-mode').value!=='ai';
  });
+ $('result-rematch').addEventListener('click',()=>{
+  dismissResult();
+  ceremonialPhase='playing';
+  $('app').dataset.phase='playing';
+  $('battle-ui').hidden=false;
+  const portrait=STAGE.clientWidth/Math.max(1,STAGE.clientHeight)<.75;
+  camera.position.set(0,portrait?15.5:10.8,portrait?24:15);
+  orbit.target.set(0,.55,0);
+  camera.fov=portrait?56:44;
+  camera.updateProjectionMatrix();
+  camera.lookAt(orbit.target);
+  orbit.enabled=true;
+  controller.start({mode:currentMode,difficulty:$('difficulty').value,playerColor:'w',clockMinutes:null});
+  rebuild();
+  playHeraldFanfare();
+ });
+ $('result-hall').addEventListener('click',()=>{
+  dismissResult();
+  controller.stop();
+  enterCeremonialHall();
+ });
  controller.on('state',updateHud);
+ controller.on('check',showCheck);
+ controller.on('gameover',result=>{void revealRoyalResult(result);});
 }
 
 function updateSize(){
@@ -635,7 +714,7 @@ async function init(){
   stageStats.firstFrameAt=performance.now();
   window.__pmv2=Object.freeze({
    snapshot:()=>controller.getSnapshot(),
-   info:()=>({backend:currentBackend,backendName:renderer.backend?.constructor?.name,webgpu:!!renderer.backend?.isWebGPUBackend,roles:stageStats.loadedRoleModels,clipsLoaded:[...templates.values()].reduce((n,t)=>n+Object.keys(t.clips).length,0),pieces:actorMap.size,skinned:stageStats.skinnedCount,fps:displayedFPS,selected,targets:targetSquares,activeMoves:activeMoves.length,animationTimeouts:controller.getAnimationTimeouts(),lastErrors:stageStats.errors.slice(-3),phase:ceremonialPhase,version:'v2-ceremony'}),
+   info:()=>({backend:currentBackend,backendName:renderer.backend?.constructor?.name,webgpu:!!renderer.backend?.isWebGPUBackend,roles:stageStats.loadedRoleModels,clipsLoaded:[...templates.values()].reduce((n,t)=>n+Object.keys(t.clips).length,0),pieces:actorMap.size,skinned:stageStats.skinnedCount,fps:displayedFPS,selected,targets:targetSquares,activeMoves:activeMoves.length,animationTimeouts:controller.getAnimationTimeouts(),lastErrors:stageStats.errors.slice(-3),phase:ceremonialPhase,cinematicActive:royalCamera.isActive,cameraDistance:+camera.position.distanceTo(orbit.target).toFixed(2),cameraFov:+camera.fov.toFixed(2),version:'v2-royal-cinematic'}),
    squareScreen: square=>{
     const p=XZ(square).project(camera),r=STAGE.getBoundingClientRect();
     return {x:r.left+(p.x+1)*r.width/2,y:r.top+(1-p.y)*r.height/2};
@@ -656,5 +735,7 @@ init();
 window.addEventListener('beforeunload',()=>{
  if(announcementTimer)clearTimeout(announcementTimer);
  if(duelTimer)clearTimeout(duelTimer);
+ if(checkCalloutTimer)clearTimeout(checkCalloutTimer);
+ royalCamera.cancel();
  try{controller.dispose();renderer.dispose();resizeObserver.disconnect();audioCtx?.close()}catch(e){}
 });

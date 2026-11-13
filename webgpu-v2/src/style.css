@@ -160,3 +160,29 @@ h2{font-family:"Songti SC","Noto Serif SC","SimSun",serif;margin:14px 0 12px;fon
 .duel-callout small{font-size:12px;letter-spacing:.4em}
 @keyframes duel-intro{0%{opacity:0;transform:translate(-50%,12px) scale(.9)}20%,75%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,-8px) scale(1.04)}}
 @media(prefers-reduced-motion:reduce){.duel-callout{animation:none!important}}
+
+/* Narrative conclusion. A genuine chess.js result, not an invented score. */
+.check-callout[hidden],.result-overlay[hidden]{display:none!important}
+.check-callout{position:absolute;z-index:11;left:50%;top:21%;transform:translateX(-50%);pointer-events:none;
+ color:#ffe3a4;text-align:center;font:normal clamp(24px,3.8vw,48px) Georgia,"Songti SC",serif;
+ letter-spacing:.35em;text-shadow:0 3px 20px #122338;animation:check-alert 1.25s ease both}
+.check-callout small{display:block;font:10px Arial,sans-serif;letter-spacing:.38em;margin-top:9px}
+@keyframes check-alert{0%,100%{opacity:0;transform:translate(-50%,10px)}20%,75%{opacity:1;transform:translate(-50%,0)}}
+.result-overlay{position:absolute;inset:0;z-index:13;display:flex;align-items:center;justify-content:center;
+ background:radial-gradient(ellipse at center,rgba(12,25,36,.56),rgba(9,20,32,.80) 72%);
+ backdrop-filter:blur(4px)}
+.result-inner{width:min(520px,90vw);border:1px solid rgba(231,199,137,.8);outline:1px solid rgba(231,199,137,.25);
+ outline-offset:8px;background:linear-gradient(145deg,rgba(24,43,56,.92),rgba(10,24,37,.9));
+ padding:36px 36px 30px;text-align:center;box-shadow:0 20px 65px rgba(4,10,18,.6)}
+.result-crown{font:normal 51px Georgia,serif;color:#f1d08c;text-shadow:0 0 25px #d1ab57a3}
+.result-eyebrow{font:10px Arial,sans-serif;color:#cdb27c;letter-spacing:.23em}
+.result-inner h2{font-size:clamp(23px,4vw,39px);letter-spacing:.15em;color:#f7ebd6;margin:20px 0 14px;padding:0}
+.result-inner p{font:12px Arial,sans-serif;letter-spacing:.18em;color:#dcbf8a}
+.result-ornament{color:#cdae76;font-size:18px;margin:21px}
+.result-replay,.result-return{width:100%;padding:15px 10px;margin-top:9px;font-size:14px;letter-spacing:.17em;min-height:47px}
+.result-replay{background:linear-gradient(110deg,#d3b372,#f0d99d,#bf9752);color:#183042;border:1px solid #f9e2b1}
+.result-return{background:transparent;border:1px solid #aa8f64;color:#e7d6b7}
+.result-replay:hover{filter:brightness(1.07)}
+.result-return:hover{background:#304151}
+@media(max-width:620px){.result-inner{padding:28px 22px 24px}.result-overlay{backdrop-filter:blur(2px)}}
+@media(prefers-reduced-motion:reduce){.check-callout{animation:none}}

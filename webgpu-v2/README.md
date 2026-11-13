@@ -47,3 +47,10 @@ See evidence/CEREMONY-RESTORATION-20261113.md and screenshots.
 Royal Hall architectural extension: independent PBR stone and bronze colonnades, dual
 banners, torch details and a lighter open royal arena background. The arcade is
 visual dressing only and never affects chess moves or the Roman SkinnedMesh models.
+
+## R3 — camera duels and real endgame ceremony
+The source module src/royalCinematics.js now coordinates the close-up 3D camera
+on legal captures, GPU-light contact ring and return to full-board framing.
+The chess.js controller check and gameover events drive alerts and verdicts.
+Rematch resets the complete 32-character board.
+Evidence: evidence/ROYAL-CINEMATICS-20261113.md.

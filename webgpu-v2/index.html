@@ -57,6 +57,18 @@
     </div>
 
     <div id="duel-callout" class="duel-callout" hidden><span>⚔</span><strong>DUEL!</strong><small>荣耀之战</small></div>
+    <div id="check-callout" class="check-callout" hidden aria-live="polite">⚜ 将 军 ⚜<small>KING IN CHECK</small></div>
+    <section id="result-overlay" class="result-overlay" hidden role="dialog" aria-modal="false" aria-label="对局结束">
+      <div class="result-inner">
+        <div class="result-crown">♛</div>
+        <span class="result-eyebrow">THE ROYAL DUEL · FINAL VERDICT</span>
+        <h2 id="result-title">王廷凯旋</h2>
+        <p id="result-reason">CHECKMATE</p>
+        <div class="result-ornament">✦</div>
+        <button type="button" id="result-rematch" class="result-replay">♜ 再战一局</button>
+        <button type="button" id="result-hall" class="result-return">返回王庭大厅</button>
+      </div>
+    </section>
     <div class="battle-ui" id="battle-ui" hidden>
       <div class="faction-score">
         <div class="side side-ivory"><span>♔</span><div>IVORY COURT<small>象牙王庭</small></div></div>
