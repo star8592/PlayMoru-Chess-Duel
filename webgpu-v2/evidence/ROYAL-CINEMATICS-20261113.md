@@ -25,3 +25,14 @@ Project: PlayMoru Chess Duel V2. Visually restore a full-fledged game while keep
 - Draft preview, not merged to PlayMoru production.
 
 Screenshots are actual browser captures, not image-generation mockups.
+
+## Public release and browser acceptance
+
+- GitHub Pages isolated Preview gh-pages commit 50f24c6a8c54d1ad562befcf57f9891961a4e983.
+- JavaScript index-CdwS2zfa.js and preview page both HTTP 200, Pages status built.
+- Real public Chrome (not local dev server) capture Qxd7+: camera 19.86 -> 9.70 -> 19.86, FOV 44 -> 36 -> 44, 29 actors remaining, page errors 0.
+- Public mobile viewport touch capture Qxd7+: restored FOV 56, page errors 0. Desktop GPU simulated phone, not physical phone.
+- Public staged Qg7# checkmate: white winner text, rematch cleanly restored 32 actors, no runtime page errors.
+- Public normal menu -> enter battle -> e2/e4 -> back to hall passed desktop 1440x900 and mobile emulation 390x844; actor count 32/32; no JS/asset errors.
+- Unresolved: native WebGPU, mobile physical hardware FPS, subjective art review.
+- Real public browser screenshots: royal-cinematic-public-*.
