@@ -12,6 +12,10 @@ account, no build-time asset pipeline — it is a static site.
 cd web && bun install && bun run dev
 ```
 
+## More strategy games from PlayMoru
+
+Looking for Go instead of chess? Try **[后弈 · HOUYI GO](https://playmoru.com/go-spirit/?utm_source=github&utm_medium=referral&utm_campaign=houyi_r24_chess)** — free browser Go with 9×9, 13×13 and 19×19 boards, real KataGo b6 neural-network play, and Vivian's 72-step beginner course. [Watch the verified 30-second browser gameplay capture](https://playmoru.com/go-spirit/media/houyi-r24-real-gameplay-vertical.mp4).
+
 ---
 
 ## Table of contents
